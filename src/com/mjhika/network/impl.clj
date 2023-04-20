@@ -1,38 +1,45 @@
 (ns com.mjhika.network.impl
   (:require
-   [babashka.cli :as cli]
-   [clojure.core.async :as a])
+   [babashka.cli :as cli])
   (:import
    java.net.InetAddress
-   (org.apache.commons.net.util SubnetUtils
-                                SubnetUtils$SubnetInfo)))
+   org.apache.commons.net.util.SubnetUtils))
+
+(set! *warn-on-reflection* true)
 
 (defn cli-opts-parser [cli-args]
-  (cli/parse-opts cli-args {:coerce {:cidr :string}}))
+  (cli/parse-opts cli-args {:alias {:c :cidr
+                                    :t :timeeout}
+                            :coerce {:cidr :string
+                                     :timeout :int}}))
 
-(defn ping-domain [domain timeout]
-  (-> (InetAddress/getByName domain)
-      (.isReachable timeout)))
+(defn timed-ping
+  "thank you Clojure Cookbook for the timed-ping"
+  [^String ip ^Integer timeout]
+  (let [addr (InetAddress/getByName ip)
+        start (. System (nanoTime))
+        result (.isReachable addr timeout)
+        total (/ (double (- (. System (nanoTime)) start)) 1000000.0)]
+    {:addr ip
+     :time total
+     :result result}))
 
-(defn get-all-subent-addresses [cidr]
-  (-> (.getInfo (SubnetUtils. cidr))
-      .getAllAddresses
-      seq))
-
-(defn load-addresses [c sq]
-  (a/go
-    (a/>! c sq)))
+(defn get-all-subent-addresses [^String cidr]
+  (let [sn (.getInfo (SubnetUtils. cidr))
+        sn-bean (bean sn)]
+    (cond
+      (= "255.255.255.255" (:netmask sn-bean)) (list (:address sn-bean))
+      :else (seq (.getAllAddresses sn)))))
 
 (comment
-  (ping-domain "google.com" 250)
 
-  (:hostAddress (bean (InetAddress/getLocalHost)))
+  (let [sn (.getInfo (SubnetUtils. "1.1.1.1/32"))
+        sn-b (bean sn)]
+    (list (:address sn-b)))
 
-  (let [sn (.getInfo (SubnetUtils. "192.168.1.0/24"))
-        all-addrs (seq (.getAllAddresses sn))]
-    all-addrs)
+  (let [sn (.getInfo (SubnetUtils. "10.1.1.0/24"))]
+    (seq (.getAllAddresses sn)))
 
-  (cli-opts-parser *command-line-args*)
-  (cli/parse-opts *command-line-args* {:coerce {:middleware :string}})
+  (get-all-subent-addresses "1.1.1.1/32")
 
-  (a/<! (a/timeout 1000)))
+  (map #(timed-ping % 150) (get-all-subent-addresses "1.1.1.1/32")))
