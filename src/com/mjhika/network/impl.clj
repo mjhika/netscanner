@@ -24,7 +24,13 @@
      :time total
      :result result}))
 
-(defn get-all-subent-addresses [^String cidr]
+(defn get-all-subent-addresses
+  "will return a `coll` of IPAddresses as strings
+  
+  This function will not return anything for CIDR notations
+  of 30 and 31 as there are no usable IP addresses
+  from that range."
+  [^String cidr]
   (let [sn (.getInfo (SubnetUtils. cidr))
         sn-bean (bean sn)]
     (cond
