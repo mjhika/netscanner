@@ -1,3 +1,8 @@
 **/.clj-kondo/
 **/.lsp/
 **/.cpcache/
+target/
+.calva/
+.idea/
+.nrepl-port
+netscanner.iml

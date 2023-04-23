@@ -9,8 +9,9 @@
 
 (defn -main [& _]
   (let [{:keys [cidr timeout]
-         :or {timeout 100}} (mjn/cli-opts-parser *command-line-args*)
-        ip-addresses (mjn/get-all-subent-addresses cidr)]
+         :or {cidr (mjn/get-local)
+              timeout 100}} (mjn/cli-opts-parser *command-line-args*)]
     (pp/pprint
      (filterv #(:result %)
-              (r/map #(mjn/timed-ping % timeout) ip-addresses)))))
+              (r/map #(mjn/timed-ping % timeout)
+                     (mjn/get-all-subent-addresses cidr))))))

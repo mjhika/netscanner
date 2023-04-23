@@ -8,6 +8,7 @@
                                 "--middleware" "[cider.nrepl/cider-middleware]"]
                    :jvm-opts ["-XX:-OmitStackTraceInFastThrow"]}}
  :deps {commons-net/commons-net {:mvn/version "3.9.0"}
-        org.babashka/cli {:mvn/version "0.6.50"}
+        kovacnica/clojure.network.ip {:mvn/version "0.1.3"}
+        org.babashka/cli {:mvn/version "0.7.51"}
         org.clojure/clojure {:mvn/version "1.11.1"}}
  :paths ["src" "resources"]}
