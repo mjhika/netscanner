@@ -6,9 +6,9 @@
 
 (set! *warn-on-reflection* true)
 
-(defn -main [& _]
+(defn -main [& args]
   (let [{:keys [cidr timeout]
-         :or {timeout 100}} (mjn/cli-opts-parser *command-line-args*)]
+         :or {timeout 100}} (mjn/cli-opts-parser args)]
     (pp/pprint
      (filterv #(:result %)
               (mjn/sweep-cidr cidr timeout)))))
