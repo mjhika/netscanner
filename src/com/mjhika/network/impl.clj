@@ -1,6 +1,7 @@
 (ns com.mjhika.network.impl
   (:require
    [babashka.cli :as cli]
+   [clojure.core.reducers :as r]
    [clojure.network.ip :as ip])
   (:import
    java.net.InetAddress))
@@ -24,52 +25,32 @@
      :time total
      :result result}))
 
-(comment
-  (def i "10.1.1.1")
-
-  (ip/make-network "10.1.1.1/24")
-  (seq (ip/make-network i 24))
-
-  (ip/ip-address (ip/make-ip-address "10.1.1.1"))
-
-  (ip/make-network (ip/make-ip-address i) 24)
-
-  (map #(ip/ip-address %)
-       (ip/make-network (ip/make-ip-address i) 24)))
-
 (defn get-all-subent-addresses
-  "will return a `coll` of IPAddresses as strings
+  "will return a `coll` of IPAddresses as strings"
+  [cidr]
+  (mapv #(ip/ip-address %)
+        (seq (ip/make-network cidr))))
 
-  This function will not return anything for CIDR notations
-  of 30 and 31 as there are no usable IP addresses
-  from that range."
-  [^String cidr]
-  (let [sn (.getInfo (SubnetUtils. cidr))
-        sn-bean (bean sn)]
-    (cond
-      (= "255.255.255.255" (:netmask sn-bean)) (list (:address sn-bean))
-      :else (seq (.getAllAddresses sn)))))
-
-(defn get-local-ip
-  "Get's the IP of the host and assumes a /24 network."
-  []
-  (str (:hostAddress (bean
-                      (InetAddress/getLocalHost)))
-       "/24"))
+(defn sweep-cidr [cidr timeout]
+  (r/map #(timed-ping % timeout)
+         (get-all-subent-addresses cidr)))
 
 (comment
+  (ip/ip-address (ip/make-network "10.1.1.1/32"))
 
-  (let [sn (.getInfo (SubnetUtils. "1.1.1.1/32"))
-        sn-b (bean sn)]
-    (list (:address sn-b)))
+  (get-all-subent-addresses "10.1.1.1/24")
+  (get-all-subent-addresses "10.1.1.1/32")
 
-  (let [sn (.getInfo (SubnetUtils. "10.1.1.0/24"))]
-    (seq (.getAllAddresses sn)))
+  (map #(timed-ping % 50) (get-all-subent-addresses "10.1.1.1/32"))
 
-  (get-all-subent-addresses "1.1.1.1/32")
+  (into []
+        (r/map #(timed-ping % 20)
+               (get-all-subent-addresses "10.1.1.1/24")))
 
-  (map #(timed-ping % 150) (get-all-subent-addresses "1.1.1.1/32"))
+  (filterv #(:result %)
+           (sweep-cidr "10.1.1.1/24" 10))
 
-  (:hostAddress
-   (bean
-    (InetAddress/getLocalHost))))
+  (timed-ping "10.1.1.0" 10)
+  ;; => {:address "10.1.1.0", :time 503.5155, :result false} result on windows
+  ;; failed to use proper timeout?
+  )
